@@ -1,35 +1,41 @@
-package main
+package payloadgen
 
 import (
 	"encoding/json"
-	"log"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-func TestGenereatePayloadFromSchema(t *testing.T) {
+func TestPayloadFromSchema(t *testing.T) {
 	loader := openapi3.NewLoader()
 	doc, err := loader.LoadFromFile("user_schema.yaml")
 	if err != nil {
-		log.Fatalf("failed to load schema: %v", err)
+		t.Errorf("failed to load schema: %v", err)
 	}
 
 	if err := doc.Validate(loader.Context); err != nil {
-		log.Fatalf("Error validating with loader: %v", err)
+		t.Errorf("Error validating with loader: %v", err)
 	}
 
 	userSchemaRef := doc.Components.Schemas["User"]
 	userSchema := userSchemaRef.Value
-	user := generatePayloadFromSchema(userSchema)
+	user := PayloadFromSchema(userSchema)
 
 	expected := map[string]any{
 		"id":   10,
 		"name": "string",
 	}
 
-	resultJSON, _ := json.Marshal(user)
-	expectedJSON, _ := json.Marshal(expected)
+	resultJSON, err := json.Marshal(user)
+	if err != nil {
+		t.Fatalf("failed to marshal generated payload: %v", err)
+	}
+
+	expectedJSON, err := json.Marshal(expected)
+	if err != nil {
+		t.Fatalf("failed to marshal expected payload: %v", err)
+	}
 
 	if string(resultJSON) != string(expectedJSON) {
 		t.Errorf("Geenerated paylod does not match expected. \nExpected: %s\nGot: %s",
