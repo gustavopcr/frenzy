@@ -26,10 +26,8 @@ func main() {
 	userSchemaRef := doc.Components.Schemas["User"]
 	userSchema := userSchemaRef.Value
 
-	pg := payloadgen.NewPayloadGenerator(nil) // #Todo: add constructor with options
+	pg := payloadgen.NewPayloadGenerator()
 	teste := pg.PayloadFromSchema(userSchema)
-
-	fmt.Println("teste: ", teste)
 
 	jsonBytes, err := json.MarshalIndent(teste, "", " ")
 	if err != nil {

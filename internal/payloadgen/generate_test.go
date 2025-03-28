@@ -21,7 +21,11 @@ func TestPayloadFromSchema(t *testing.T) {
 	userSchemaRef := doc.Components.Schemas["User"]
 	userSchema := userSchemaRef.Value
 
-	pg := NewPayloadGenerator(nil) // #Todo: add constructor with options
+	pg := NewPayloadGenerator(
+		WithGenerateString(func(schema *openapi3.Schema) any {
+			return "string"
+		}),
+	)
 
 	user := pg.PayloadFromSchema(userSchema)
 
@@ -60,9 +64,14 @@ func TestPayloadFromSchemaEnum(t *testing.T) {
 	userSchemaRef := doc.Components.Schemas["User"]
 	userSchema := userSchemaRef.Value
 
-	pg := NewPayloadGenerator(func(enumValues []any) any {
-		return enumValues[0]
-	}) // Overwriting default enumSelector to make testing predictable
+	pg := NewPayloadGenerator(
+		WithGenerateString(func(schema *openapi3.Schema) any {
+			return "string"
+		}),
+		WithGenerateEnum(func(enumValues []any) any {
+			return enumValues[0]
+		}),
+	) // Overwriting default enumSelector to make testing predictable
 
 	user := pg.PayloadFromSchema(userSchema)
 
