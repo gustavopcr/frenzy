@@ -1,82 +1,101 @@
 package payloadgen
 
 import (
+	"github.com/brianvoe/gofakeit/v7"
+
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-var typeGenerators = map[string]func(*openapi3.Schema) any{}
-
-func init() {
-	typeGenerators = map[string]func(*openapi3.Schema) any{
-		"string":  wrap(generateString),
-		"integer": wrap(generateInteger),
-		"number":  wrap(generateNumber),
-		"boolean": wrap(generateBoolean),
-		"array":   wrap(generateArray),
-		"object":  wrap(generateObject),
-	}
-}
-func wrap[T any](fn func(*openapi3.Schema) T) func(*openapi3.Schema) any {
-	return func(s *openapi3.Schema) any {
-		return fn(s)
-	}
+type PayloadGenerator struct {
+	generators map[string]func(*openapi3.Schema) any
+	enumSelect func(enumValues []any) any
 }
 
-func generateString(schema *openapi3.Schema) string {
+func NewPayloadGenerator(enumSelector func(enumValues []any) any) *PayloadGenerator {
+	if enumSelector == nil {
+		enumSelector = func(enumValues []any) any {
+			if len(enumValues) > 0 {
+				index := gofakeit.Number(0, len(enumValues)-1)
+				return enumValues[index]
+			}
+			return nil
+		}
+	}
+	pg := PayloadGenerator{
+		enumSelect: enumSelector,
+	}
+
+	pg.generators = map[string]func(*openapi3.Schema) any{
+		"string":  pg.generateString,
+		"integer": pg.generateInteger,
+		"number":  pg.generateNumber,
+		"boolean": pg.generateBoolean,
+		"array":   pg.generateArray,
+		"object":  pg.generateObject,
+	}
+	return &pg
+}
+
+func (pg *PayloadGenerator) generateString(schema *openapi3.Schema) any {
 	return "string"
 }
 
-func generateInteger(schema *openapi3.Schema) int {
+func (pg *PayloadGenerator) generateInteger(schema *openapi3.Schema) any {
 	return 10
 }
 
-func generateNumber(schema *openapi3.Schema) float64 {
+func (pg *PayloadGenerator) generateNumber(schema *openapi3.Schema) any {
 	return 3.14
 }
 
-func generateBoolean(schema *openapi3.Schema) bool {
+func (pg *PayloadGenerator) generateBoolean(schema *openapi3.Schema) any {
 	return true
 }
 
-func generateArray(schema *openapi3.Schema) []any {
+// returns []any
+func (pg *PayloadGenerator) generateArray(schema *openapi3.Schema) any {
 	if schema.Items == nil || schema.Items.Value == nil {
 		return []any{}
 	}
-	item := PayloadFromSchema(schema.Items.Value)
+	item := pg.PayloadFromSchema(schema.Items.Value)
 	return []any{item}
 }
 
-func generateObject(schema *openapi3.Schema) map[string]any {
+// returns map[string]any
+func (pg *PayloadGenerator) generateObject(schema *openapi3.Schema) any {
 	obj := make(map[string]any)
 	for propName, propSchemaRef := range schema.Properties {
 		propSchema := propSchemaRef.Value
-		obj[propName] = PayloadFromSchema(propSchema)
+		obj[propName] = pg.PayloadFromSchema(propSchema)
 	}
 	return obj
 }
 
-func PayloadFromSchema(schema *openapi3.Schema) any {
+func (pg *PayloadGenerator) PayloadFromSchema(schema *openapi3.Schema) any {
 	if schema == nil || schema.Type == nil {
 		return nil
 	}
 
+	if len(schema.Enum) > 0 {
+		return pg.enumSelect(schema.Enum)
+	}
 	switch {
 	case schema.Type.Is("object"):
-		return typeGenerators["object"](schema)
+		return pg.generators["object"](schema)
 	case schema.Type.Is("array"):
-		return typeGenerators["array"](schema)
+		return pg.generators["array"](schema)
 
 	case schema.Type.Is("string"):
-		return typeGenerators["string"](schema)
+		return pg.generators["string"](schema)
 
 	case schema.Type.Is("integer"):
-		return typeGenerators["integer"](schema)
+		return pg.generators["integer"](schema)
 
 	case schema.Type.Is("number"):
-		return typeGenerators["number"](schema)
+		return pg.generators["number"](schema)
 
 	case schema.Type.Is("boolean"):
-		return typeGenerators["boolean"](schema)
+		return pg.generators["boolean"](schema)
 	default:
 		return nil
 	}

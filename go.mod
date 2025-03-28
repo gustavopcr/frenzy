@@ -2,7 +2,10 @@ module github.com/gustavopcr/frenzy
 
 go 1.24.1
 
-require github.com/getkin/kin-openapi v0.131.0
+require (
+	github.com/brianvoe/gofakeit/v7 v7.2.1
+	github.com/getkin/kin-openapi v0.131.0
+)
 
 require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
