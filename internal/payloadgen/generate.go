@@ -10,8 +10,6 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-type GeneratorOptions func(*PayloadGenerator)
-
 type PayloadGenerator struct {
 	generateString  func(schema *openapi3.Schema) any
 	generateInteger func(schema *openapi3.Schema) any
@@ -20,31 +18,28 @@ type PayloadGenerator struct {
 	generateEnum    func(enumValues []any) any
 }
 
-func WithGenerateString(fn func(schema *openapi3.Schema) any) GeneratorOptions {
-	return func(pg *PayloadGenerator) {
-		pg.generateString = fn
+func NewPayloadGenerator(opts ...GeneratorOptions) *PayloadGenerator {
+	pg := &PayloadGenerator{
+		generateString:  defaultGenerateString,
+		generateInteger: defaultGenerateInteger,
+		generateNumber:  defaultGenerateNumber,
+		generateBoolean: defaultGenerateBoolean,
+		generateEnum: func(enumValues []any) any {
+			if len(enumValues) > 0 {
+				index := gofakeit.Number(0, len(enumValues)-1)
+				return enumValues[index]
+			}
+			return nil
+		},
 	}
-}
-func WithGenerateInteger(fn func(schema *openapi3.Schema) any) GeneratorOptions {
-	return func(pg *PayloadGenerator) {
-		pg.generateInteger = fn
-	}
-}
-func WithGenerateNumber(fn func(schema *openapi3.Schema) any) GeneratorOptions {
-	return func(pg *PayloadGenerator) {
-		pg.generateNumber = fn
-	}
-}
-func WithGenerateBoolean(fn func(schema *openapi3.Schema) any) GeneratorOptions {
-	return func(pg *PayloadGenerator) {
-		pg.generateBoolean = fn
-	}
-}
 
-func WithGenerateEnum(fn func(enumValues []any) any) GeneratorOptions {
-	return func(pg *PayloadGenerator) {
-		pg.generateEnum = fn
+	for _, opt := range opts {
+		if opt != nil {
+			opt(pg)
+		}
 	}
+
+	return pg
 }
 
 func defaultGenerateString(schema *openapi3.Schema) any {
@@ -107,30 +102,6 @@ func (pg *PayloadGenerator) generateObject(schema *openapi3.Schema) any {
 		obj[propName] = pg.PayloadFromSchema(propSchema)
 	}
 	return obj
-}
-
-func NewPayloadGenerator(opts ...GeneratorOptions) *PayloadGenerator {
-	pg := &PayloadGenerator{
-		generateString:  defaultGenerateString,
-		generateInteger: defaultGenerateInteger,
-		generateNumber:  defaultGenerateNumber,
-		generateBoolean: defaultGenerateBoolean,
-		generateEnum: func(enumValues []any) any {
-			if len(enumValues) > 0 {
-				index := gofakeit.Number(0, len(enumValues)-1)
-				return enumValues[index]
-			}
-			return nil
-		},
-	}
-
-	for _, opt := range opts {
-		if opt != nil {
-			opt(pg)
-		}
-	}
-
-	return pg
 }
 
 func (pg *PayloadGenerator) PayloadFromSchema(schema *openapi3.Schema) any {
