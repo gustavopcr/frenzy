@@ -76,7 +76,15 @@ func defaultGenerateString(schema *openapi3.Schema) any {
 }
 
 func defaultGenerateInteger(schema *openapi3.Schema) any {
-	return 10
+	min := 0
+	max := gofakeit.Int()
+	if schema.Min != nil {
+		min = int(*schema.Min)
+	}
+	if schema.Max != nil {
+		max = int(*schema.Max)
+	}
+	return gofakeit.Number(min, max)
 }
 
 func defaultGenerateNumber(schema *openapi3.Schema) any {

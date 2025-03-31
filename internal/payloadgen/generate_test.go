@@ -25,6 +25,9 @@ func TestPayloadFromSchema(t *testing.T) {
 		WithGenerateString(func(schema *openapi3.Schema) any {
 			return "string"
 		}),
+		WithGenerateInteger(func(schema *openapi3.Schema) any {
+			return 10
+		}),
 	)
 
 	user := pg.PayloadFromSchema(userSchema)
@@ -67,6 +70,9 @@ func TestPayloadFromSchemaEnum(t *testing.T) {
 	pg := NewPayloadGenerator(
 		WithGenerateString(func(schema *openapi3.Schema) any {
 			return "string"
+		}),
+		WithGenerateInteger(func(schema *openapi3.Schema) any {
+			return 10
 		}),
 		WithGenerateEnum(func(enumValues []any) any {
 			return enumValues[0]
