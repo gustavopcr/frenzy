@@ -1,0 +1,140 @@
+openapi: 3.1.0
+info:
+  title: My API
+  version: 1.0.0
+paths:
+  /users:
+    post:
+      summary: Create a new user
+      description: Adds a new user to the system
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '400':
+          description: Bad request - invalid input
+    get:
+      summary: List all users
+      description: Returns a list of all users in the system
+      parameters:
+        - name: userType
+          in: query
+          description: Filter by user type
+          required: true
+          schema:
+            type: string
+            enum: [admin, editor, viewer]
+      responses:
+        '200':
+          description: A list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+  /users/{userId}:
+    get:
+      summary: Get user by ID
+      description: Returns a single user by ID
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: User found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+
+components:
+  schemas:
+    User:
+      type: object
+      required:
+        - name
+        - userType
+      properties:
+        id:
+          type: integer
+          description: Unique identifier for the user
+          example: 10
+          readOnly: true
+        name:
+          type: string
+          description: Full name of the user
+          example: "John Doe"
+          minLength: 2
+          maxLength: 100
+        userType:
+          type: string
+          enum: [admin, editor, viewer]
+          description: Type of user access level
+          example: "editor"
+        email:
+          type: string
+          format: email
+          description: Email address of the user
+          example: "john.doe@example.com"
+        age:
+          type: integer
+          description: Age of the user in years
+          minimum: 18
+          example: 30
+        isActive:
+          type: boolean
+          description: Whether the user account is active
+          default: true
+          example: true
+        tags:
+          type: array
+          description: List of tags associated with the user
+          items:
+            type: string
+          example: ["premium", "verified"]
+        metadata:
+          type: object
+          description: Additional user metadata
+          properties:
+            lastLogin:
+              type: string
+              format: date-time
+              example: "2023-01-01T12:00:00Z"
+            loginCount:
+              type: integer
+              example: 27
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+          description: When the user account was created
+          readOnly: true
+          example: "2023-01-01T12:00:00Z"
+    
+    UserResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: "User created successfully"
+        timestamp:
+          type: string
+          format: date-time
+          example: "2023-01-01T12:05:00Z"

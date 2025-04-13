@@ -88,11 +88,19 @@ func defaultGenerateInteger(schema *openapi3.Schema) any {
 }
 
 func defaultGenerateNumber(schema *openapi3.Schema) any {
-	return 3.14
+	min := 0.0
+	max := gofakeit.Float64()
+	if schema.Min != nil {
+		min = *schema.Min
+	}
+	if schema.Max != nil {
+		max = *schema.Max
+	}
+	return gofakeit.Float64Range(min, max)
 }
 
 func defaultGenerateBoolean(schema *openapi3.Schema) any {
-	return true
+	return gofakeit.Bool()
 }
 
 func (pg *PayloadGenerator) generateArray(schema *openapi3.Schema) []any {

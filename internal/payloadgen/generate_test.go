@@ -2,10 +2,28 @@ package payloadgen
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
+
+func customPayloadGenerator() *PayloadGenerator {
+	return NewPayloadGenerator(
+		WithGenerateInteger(func(schema *openapi3.Schema) any {
+			return 10
+		}),
+		WithGenerateNumber(func(schema *openapi3.Schema) any {
+			return 3.14
+		}),
+		WithGenerateBoolean(func(schema *openapi3.Schema) any {
+			return true
+		}),
+		WithGenerateEnum(func(enumValues []any) any {
+			return enumValues[0]
+		}),
+	) // Overwriting default enumSelector to make testing predictable
+}
 
 func TestPayloadFromSchema(t *testing.T) {
 	loader := openapi3.NewLoader()
@@ -27,6 +45,9 @@ func TestPayloadFromSchema(t *testing.T) {
 		}),
 		WithGenerateInteger(func(schema *openapi3.Schema) any {
 			return 10
+		}),
+		WithGenerateNumber(func(schema *openapi3.Schema) any {
+			return 3.14
 		}),
 	)
 
@@ -74,6 +95,9 @@ func TestPayloadFromSchemaEnum(t *testing.T) {
 		WithGenerateInteger(func(schema *openapi3.Schema) any {
 			return 10
 		}),
+		WithGenerateNumber(func(schema *openapi3.Schema) any {
+			return 3.14
+		}),
 		WithGenerateEnum(func(enumValues []any) any {
 			return enumValues[0]
 		}),
@@ -100,5 +124,25 @@ func TestPayloadFromSchemaEnum(t *testing.T) {
 	if string(resultJSON) != string(expectedJSON) {
 		t.Errorf("Generated payload does not match expected. \nExpected: %s\nGot: %s",
 			expectedJSON, resultJSON)
+	}
+}
+
+func TestPayloadFromSchemaComplete(t *testing.T) { //TODO: finish this test
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromFile("user_schema_complete.yaml")
+	if err != nil {
+		t.Errorf("failed to load schema: %v", err)
+	}
+
+	if err := doc.Validate(loader.Context); err != nil {
+		t.Errorf("Error validating with loader: %v", err)
+	}
+
+	userSchemaRef := doc.Components.Schemas["User"]
+	userSchema := userSchemaRef.Value
+	pg := customPayloadGenerator()
+	user := pg.PayloadFromSchema(userSchema)
+	if user != nil {
+		fmt.Println("name: ", user)
 	}
 }
