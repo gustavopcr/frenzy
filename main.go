@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/getkin/kin-openapi/openapi3"
@@ -26,13 +27,34 @@ func main() {
 	userSchemaRef := doc.Components.Schemas["User"]
 	userSchema := userSchemaRef.Value
 
-	resp, err := http.TestePost("http://localhost:8080/hello", userSchema)
-	if err != nil {
-		panic(err)
+	httpHandler := http.NewHttpHandler()
+
+	go httpHandler.TestePost(userSchema)
+	go httpHandler.TestePost(userSchema)
+	go httpHandler.TesteGet()
+
+	httpHandler.Wg.Add(3)
+	go func() {
+		httpHandler.Wg.Wait()
+		close(httpHandler.Results)
+	}()
+
+	for {
+		select {
+		case res, ok := <-httpHandler.Results:
+			if !ok {
+				return
+			}
+
+			jsonBytes, err := io.ReadAll(res.Resp.Body)
+			if err != nil {
+				panic(err)
+			}
+			defer res.Resp.Body.Close()
+			fmt.Println(string(jsonBytes))
+		case <-time.After(5 * time.Second):
+			fmt.Println("Timeout waiting for response")
+		}
 	}
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("resp: ", string(bodyBytes))
+
 }

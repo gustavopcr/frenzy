@@ -4,21 +4,59 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gustavopcr/frenzy/internal/payloadgen"
 )
 
-func TesteGet(url string, schema *openapi3.Schema) (*http.Response, error) {
-	//TODO add query string later on
-	resp, err := http.Get(url)
-	if err != nil {
-		return &http.Response{Status: "400", StatusCode: http.StatusBadRequest}, nil
-	}
-	return resp, nil
+type httpConfig struct {
+	url     string
+	Timeout time.Duration
+	reqSeq  int
+	headers map[string]string
 }
 
-func TestePost(url string, schema *openapi3.Schema) (*http.Response, error) {
+type Result struct {
+	Resp *http.Response
+	err  error
+}
+
+type httpHandler struct {
+	config  *httpConfig
+	client  *http.Client
+	Results chan Result
+	Wg      *sync.WaitGroup
+}
+
+func NewHttpHandler() *httpHandler {
+	httpConfig := &httpConfig{url: "http://localhost:8080/hello"}
+	httpClient := &http.Client{}
+	resultsChan := make(chan Result)
+
+	return &httpHandler{
+		config:  httpConfig,
+		client:  httpClient,
+		Results: resultsChan,
+		Wg:      &sync.WaitGroup{},
+	}
+}
+
+func (httpHandler *httpHandler) TesteGet() {
+	defer httpHandler.Wg.Done()
+	//TODO add query string later on
+	resp, err := httpHandler.client.Get(httpHandler.config.url)
+	if err != nil {
+		httpHandler.Results <- Result{nil, err}
+
+	}
+	httpHandler.Results <- Result{resp, nil}
+
+}
+
+func (httpHandler *httpHandler) TestePost(schema *openapi3.Schema) {
+	defer httpHandler.Wg.Done()
 	pg := payloadgen.NewPayloadGenerator()
 	teste := pg.PayloadFromSchema(schema)
 
@@ -28,9 +66,9 @@ func TestePost(url string, schema *openapi3.Schema) (*http.Response, error) {
 	}
 
 	body := bytes.NewReader(jsonBytes)
-	resp, err := http.Post(url, "application/json", body)
+	resp, err := httpHandler.client.Post(httpHandler.config.url, "application/json", body)
 	if err != nil {
-		return &http.Response{Status: "400", StatusCode: http.StatusBadRequest}, nil
+		httpHandler.Results <- Result{nil, err}
 	}
-	return resp, nil
+	httpHandler.Results <- Result{resp, nil}
 }
