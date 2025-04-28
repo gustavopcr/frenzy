@@ -33,19 +33,17 @@ func main() {
 	go httpHandler.TestePost(userSchema)
 	go httpHandler.TesteGet()
 
-	httpHandler.Wg.Add(3)
-	go func() {
-		httpHandler.Wg.Wait()
-		close(httpHandler.Results)
-	}()
-
-	for {
+	for i := 0; i < 3; i++ {
 		select {
 		case res, ok := <-httpHandler.Results:
 			if !ok {
 				return
 			}
-
+			if res.Err != nil {
+				fmt.Println("ERROR FOUND")
+				continue
+			}
+			fmt.Println("alo")
 			jsonBytes, err := io.ReadAll(res.Resp.Body)
 			if err != nil {
 				panic(err)
